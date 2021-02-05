@@ -1,0 +1,70 @@
+plugins {
+    id 'idea'
+    id 'java'
+}
+
+if (!System.properties['java.version'].startsWith('11')) {
+    throw new RuntimeException('Incompatible JRE version: ' + System.properties['java.version'] + '. Use JRE 11 instead.')
+}
+
+import java.nio.charset.StandardCharsets
+import java.text.SimpleDateFormat
+
+group 'org.halmawork.spcm'
+version '1.0.0-SNAPSHOT'
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+tasks.withType(JavaCompile) {
+    options.encoding = StandardCharsets.UTF_8
+}
+
+jar {
+    enabled = true
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Built-By': System.properties['user.name'],
+                'Build-Timestamp': new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Build-Jdk': "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+                'Build-OS': "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}"
+        )
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url 'https://maven.aliyun.com/repository/public'
+    }
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    // TSDB for influxdb 只支持到1.7.x，所以用不了2.0的客户端
+//    implementation "com.influxdb:influxdb-client-flux:${influxdb_version}"
+//    implementation "com.influxdb:flux-dsl:${influxdb_version}"
+    implementation "org.influxdb:influxdb-java:${influxdb_version}"
+    implementation "ch.qos.logback:logback-classic:${logback_version}"
+    compileOnly "org.projectlombok:lombok:${lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+
+    testCompileOnly "org.projectlombok:lombok:${lombok_version}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombok_version}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junit_version}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junit_version}"
+}
