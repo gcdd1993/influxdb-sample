@@ -1,9 +1,11 @@
 import io.github.gcdd1993.influxdbsample.Point;
 import lombok.extern.slf4j.Slf4j;
+import org.influxdb.BatchOptions;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
 import org.influxdb.impl.InfluxDBMapper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -11,6 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * https://docs.influxdata.com/influxdb/v2.0/write-data/best-practices/
+ *
  * @author gcdd1993
  * @date 2021/2/4
  * @since 1.0.0
@@ -57,8 +61,9 @@ public class DataWriteTest {
                 .retentionPolicy("autogen");
         var startTime = System.currentTimeMillis();
 //        var batchSize = 1000; 550ms
+        var batchSize = 5000; // 550ms
 //        var batchSize = 10_000; 774ms
-        var batchSize = 100_000; // 2319ms
+//        var batchSize = 100_000; // 2319ms
 //        var batchSize = 1000_000; 失败
         for (int i = 0; i < batchSize; i++) {
             var point = org.influxdb.dto.Point
@@ -99,6 +104,83 @@ public class DataWriteTest {
                     .time(System.currentTimeMillis() - 100 * i, TimeUnit.MILLISECONDS)
                     .tag("device_id", "540615790879219")
                     .tag("point_key", "113")
+                    .addField("value", ThreadLocalRandom.current().nextDouble(0, 10))
+                    .build();
+            client.write(point);
+        }
+        client.close();
+        var endTime = System.currentTimeMillis();
+
+        log.info("耗时: {}ms.", (endTime - startTime));
+    }
+
+    /**
+     * 批处理，使用GZip
+     */
+    @Test
+    void _writeBatch2() {
+        var client = InfluxDBFactory.connect(System.getenv("TSDB_URL"), "admin", "1123LOVEwm@");
+        client.setDatabase("tabby1");
+        client.enableGzip();
+        Assertions.assertTrue(client.isGzipEnabled());
+        var batchPointsBuilder = BatchPoints
+                .database("tabby1")
+                .retentionPolicy("autogen");
+        var startTime = System.currentTimeMillis();
+//        var batchSize = 1000; 550ms
+        var batchSize = 5000; // 550ms
+//        var batchSize = 10_000; 774ms
+//        var batchSize = 100_000; // 2319ms
+//        var batchSize = 1000_000; 失败
+        for (int i = 0; i < batchSize; i++) {
+            var point = org.influxdb.dto.Point
+                    .measurement("device.point")
+                    .time(System.currentTimeMillis() - 100 * i, TimeUnit.MILLISECONDS)
+                    .tag("device_id", "540615790879219")
+                    .tag("point_key", "112")
+                    .addField("value", ThreadLocalRandom.current().nextDouble(0, 10))
+                    .build();
+            batchPointsBuilder.point(point);
+        }
+        client.write(batchPointsBuilder.build());
+        client.close();
+        var endTime = System.currentTimeMillis();
+
+        log.info("耗时: {}ms.", (endTime - startTime));
+    }
+
+
+    /**
+     * 自动批处理 & 写入失败重试
+     */
+    @Test
+    void _writeBatchRetry1() {
+        var client = InfluxDBFactory.connect(System.getenv("TSDB_URL"), "admin", "1123LOVEwm@");
+        client.setRetentionPolicy("autogen");
+        client.setConsistency(InfluxDB.ConsistencyLevel.ONE);
+        client.setDatabase("tabby1");
+        client.enableGzip(); // 3194ms -> 2728ms
+
+        var options = BatchOptions
+                .DEFAULTS
+                .bufferLimit(6_000)
+                .actions(5_000)
+                .consistency(InfluxDB.ConsistencyLevel.ANY)
+                .flushDuration(1000)
+                .jitterDuration(100);
+        client.enableBatch(options);
+//        var batchSize = 1000; 550ms
+//        var batchSize = 10_000; 774ms
+        var batchSize = 100_000; // 耗时: 3194ms.
+//        var batchSize = 1000_000; 失败
+        // write
+        var startTime = System.currentTimeMillis();
+        for (int i = 0; i < batchSize; i++) {
+            var point = org.influxdb.dto.Point
+                    .measurement("device.point")
+                    .time(System.currentTimeMillis() - 100 * i, TimeUnit.MILLISECONDS)
+                    .tag("device_id", "540615790879219")
+                    .tag("point_key", "114")
                     .addField("value", ThreadLocalRandom.current().nextDouble(0, 10))
                     .build();
             client.write(point);

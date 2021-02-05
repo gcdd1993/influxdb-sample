@@ -58,6 +58,7 @@ dependencies {
     // TSDB for influxdb 只支持到1.7.x，所以用不了2.0的客户端
 //    implementation "com.influxdb:influxdb-client-flux:${influxdb_version}"
 //    implementation "com.influxdb:flux-dsl:${influxdb_version}"
+    implementation "io.projectreactor:reactor-core:${reactor_version}"
     implementation "org.influxdb:influxdb-java:${influxdb_version}"
     implementation "ch.qos.logback:logback-classic:${logback_version}"
     compileOnly "org.projectlombok:lombok:${lombok_version}"
