@@ -154,6 +154,7 @@ public class DataWriteTest {
      * 自动批处理 & 写入失败重试
      */
     @Test
+    @Deprecated
     void _writeBatchRetry1() {
         var client = InfluxDBFactory.connect(System.getenv("TSDB_URL"), "admin", "1123LOVEwm@");
         client.setRetentionPolicy("autogen");
