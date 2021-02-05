@@ -189,6 +189,10 @@ public class DataWriteTest {
         var endTime = System.currentTimeMillis();
 
         log.info("耗时: {}ms.", (endTime - startTime));
+
+        for (; ; ) {
+            // blocking
+        }
     }
 
 }
